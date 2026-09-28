@@ -1,7 +1,7 @@
 :root { --bg:#f6f8fb; --card:#ffffff; --ink:#1c2430; --muted:#64748b; --accent:#0d9488; --accent-d:#0b7c73; --line:#e2e8f0; --warn:#f59e0b; }
 * { box-sizing:border-box; }
 body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
-.hero { background:linear-gradient(135deg,#0d9488,#0ea5e9); color:#fff; padding:2.5rem 1rem; text-align:center; }
+.hero { background:#0d9488; color:#fff; padding:2.5rem 1rem; text-align:center; }
 .hero h1 { margin:0 0 .4rem; font-size:2rem; }
 .hero p { margin:0; opacity:.92; }
 .wrap { max-width:760px; margin:-1.2rem auto 3rem; padding:0 1rem; }
@@ -36,4 +36,9 @@ button.link { background:none; border:none; color:var(--accent-d); font-weight:7
 .trip-row:first-child { border-top:none; }
 .trip-row .muted { flex:1; }
 .foot { text-align:center; color:var(--muted); font-size:.85rem; padding:1rem; }
+
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 @media (max-width:560px){ .form-grid{ grid-template-columns:1fr; } }
