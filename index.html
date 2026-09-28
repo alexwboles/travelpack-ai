@@ -7,38 +7,92 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<header class="hero">
-  <h1>TravelPack AI</h1>
-  <p>Answer three questions, get a complete packing list. Works offline, no account, no API keys.</p>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span class="brand-mark">✈</span> TravelPack <em>AI</em></div>
+    <p class="topbar-tag">Answer three questions, get a complete packing list. Offline, no account, no API keys.</p>
+  </div>
 </header>
 
 <main class="wrap">
-  <section class="card">
-    <h2>Plan your trip</h2>
-    <div class="form-grid">
-      <label>Trip name <input id="tripName" type="text" placeholder="e.g. Lisbon long weekend"></label>
-      <label>Trip type <select id="tripType"></select></label>
-      <label>Days <input id="days" type="number" min="1" max="60" value="5"></label>
-      <label>Weather <select id="weather"></select></label>
+
+  <!-- ============ the boarding pass ============ -->
+  <section class="ticket" aria-label="Plan your trip">
+    <div class="ticket-main">
+      <div class="ticket-head">
+        <div>
+          <p class="kicker">Boarding pass · Trip planner</p>
+          <h1>Where to next?</h1>
+        </div>
+        <span class="ticket-code">TPK·26</span>
+      </div>
+
+      <div class="field">
+        <label for="tripName">Trip name</label>
+        <input id="tripName" type="text" placeholder="e.g. Lisbon long weekend" maxlength="60">
+      </div>
+
+      <div class="field">
+        <span class="flabel" id="tripTypeLabel">Trip type</span>
+        <div class="type-cards" id="typeCards" role="radiogroup" aria-labelledby="tripTypeLabel"></div>
+        <select id="tripType" class="visually-hidden" aria-hidden="true" tabindex="-1"></select>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="days">Days</label>
+          <input id="days" type="number" min="1" max="60" value="5">
+        </div>
+        <div class="field">
+          <label for="weather">Weather</label>
+          <select id="weather"></select>
+        </div>
+      </div>
+
+      <p id="tipBox" class="tip" style="display:none"></p>
     </div>
-    <div class="actions">
-      <button id="genBtn" class="primary">Generate packing list</button>
-      <button id="printBtn">Print / PDF</button>
+
+    <div class="ticket-stub">
+      <span class="notch notch-top"></span>
+      <span class="notch notch-bottom"></span>
+      <p class="kicker">Departures</p>
+      <div class="stub-summary" id="stubSummary">
+        <div class="stub-line"><span>From</span><strong>Your closet</strong></div>
+        <div class="stub-line"><span>To</span><strong id="stubDest">—</strong></div>
+        <div class="stub-line"><span>Duration</span><strong id="stubDays">5 days</strong></div>
+        <div class="stub-line"><span>Conditions</span><strong id="stubWx">—</strong></div>
+      </div>
+      <div class="actions">
+        <button id="genBtn" class="primary">Generate packing list</button>
+        <button id="printBtn" class="ghost">Print / PDF</button>
+      </div>
     </div>
-    <p id="tipBox" class="tip" style="display:none"></p>
   </section>
 
-  <div id="progressWrap" class="card" style="display:none">
+  <!-- ============ journey progress ============ -->
+  <div id="progressWrap" class="journey" style="display:none">
+    <div class="journey-head">
+      <span class="kicker">Journey progress</span>
+      <p id="progressText" class="muted"></p>
+    </div>
     <div class="progress"><div id="progressBar"></div></div>
-    <p id="progressText" class="muted"></p>
   </div>
 
-  <div id="forgetStrip" class="forget" style="display:none"></div>
+  <!-- ============ departure board: don't forget ============ -->
+  <div id="forgetStrip" class="departure" style="display:none"></div>
 
+  <!-- ============ luggage compartments ============ -->
   <div id="listWrap"></div>
 
-  <section class="card">
-    <h2>Saved trips</h2>
+  <!-- ============ ticket wallet ============ -->
+  <section class="wallet">
+    <div class="wallet-head">
+      <div>
+        <p class="kicker">Ticket wallet</p>
+        <h2>Saved trips</h2>
+      </div>
+    </div>
     <div id="savedList"><p class="muted">No saved trips yet.</p></div>
   </section>
 </main>

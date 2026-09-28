@@ -64,6 +64,49 @@
     });
   }
 
+  const TYPE_CODES = { beach: "BCH", city: "CTY", hiking: "TRK", business: "BIZ", cruise: "CRS", roadtrip: "RDE" };
+
+  function renderTypeCards() {
+    const box = $("typeCards");
+    if (!box) return;
+    box.innerHTML = "";
+    for (const t of TRIP_TYPES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "type-card";
+      b.setAttribute("role", "radio");
+      b.dataset.type = t;
+      b.innerHTML = "<span class='tc-code'>" + TYPE_CODES[t] + "</span>" +
+        "<span class='tc-label'>" + escapeHtml(TRIP_LABELS[t]) + "</span>";
+      b.addEventListener("click", () => {
+        $("tripType").value = t;
+        syncTypeCards();
+        updateStub();
+      });
+      box.appendChild(b);
+    }
+    syncTypeCards();
+  }
+
+  function syncTypeCards() {
+    const box = $("typeCards");
+    if (!box) return;
+    const cur = $("tripType").value;
+    box.querySelectorAll(".type-card").forEach((b) => {
+      b.setAttribute("aria-checked", b.dataset.type === cur ? "true" : "false");
+    });
+  }
+
+  function updateStub() {
+    const dest = $("stubDest"), dd = $("stubDays"), wx = $("stubWx");
+    if (!dest) return;
+    const name = $("tripName").value.trim();
+    const tt = $("tripType").value, days = $("days").value, w = $("weather").value;
+    dest.textContent = name || TRIP_LABELS[tt] || "—";
+    dd.textContent = (parseInt(days, 10) || 5) + " days";
+    wx.textContent = WEATHER_LABELS[w] || "—";
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
   }
@@ -88,7 +131,7 @@
     ).join("");
     el.querySelectorAll("[data-load]").forEach((b) => b.addEventListener("click", () => {
       const t = loadTrips().find((x) => x.name === b.getAttribute("data-load"));
-      if (t) { current = t; $("tripName").value = t.name; $("tripType").value = t.tripType; $("days").value = t.days; $("weather").value = t.weather; renderList(); }
+      if (t) { current = t; $("tripName").value = t.name; $("tripType").value = t.tripType; $("days").value = t.days; $("weather").value = t.weather; syncTypeCards(); updateStub(); renderList(); }
     }));
     el.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => {
       saveTrips(loadTrips().filter((x) => x.name !== b.getAttribute("data-del")));
@@ -130,6 +173,11 @@
     const tt = $("tripType"), wx = $("weather");
     for (const t of TRIP_TYPES) { const o = document.createElement("option"); o.value = t; o.textContent = TRIP_LABELS[t]; tt.appendChild(o); }
     for (const wthr of WEATHERS) { const o = document.createElement("option"); o.value = wthr; o.textContent = WEATHER_LABELS[wthr]; wx.appendChild(o); }
+    renderTypeCards();
+    updateStub();
+    ["tripName", "days"].forEach((id) => $(id).addEventListener("input", updateStub));
+    ["weather"].forEach((id) => $(id).addEventListener("change", updateStub));
+    tt.addEventListener("change", () => { syncTypeCards(); updateStub(); });
     $("genBtn").addEventListener("click", generate);
     $("printBtn").addEventListener("click", printList);
     renderSaved();
