@@ -4,6 +4,7 @@
   const $ = (id) => document.getElementById(id);
   const LS_KEY = "travelpack.trips.v1";
   let current = null; // {name, tripType, days, weather, items:[{n,cat,qty,essential,packed}]}
+  let itemQuery = "";
 
   function loadTrips() {
     try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch (e) { return []; }
@@ -20,7 +21,14 @@
 
   function renderList() {
     const wrap = $("listWrap");
-    if (!current) { wrap.innerHTML = ""; $("progressWrap").style.display = "none"; return; }
+    const tools = $("listTools"), cbox = $("customBox");
+    if (!current) {
+      wrap.innerHTML = "";
+      $("progressWrap").style.display = "none";
+      tools.style.display = "none"; cbox.style.display = "none";
+      return;
+    }
+    tools.style.display = "flex"; cbox.style.display = "block";
     const groups = {};
     for (const it of current.items) { (groups[it.cat] = groups[it.cat] || []).push(it); }
     const counts = countItems(groups);
@@ -37,10 +45,13 @@
       strip.innerHTML = "<strong>Don't forget:</strong> " + missing.map((m) => escapeHtml(m.n)).join(" · ");
     } else { strip.style.display = "none"; strip.innerHTML = ""; }
 
-    let html = "";
+    const q = itemQuery.trim().toLowerCase();
+    let html = "", shown = 0;
     for (const c of CATEGORIES) {
-      const items = groups[c] || [];
+      let items = groups[c] || [];
+      if (q) items = filterItems(items, q);
       if (!items.length) continue;
+      shown += items.length;
       html += "<section class='cat'><h3>" + CATEGORY_LABELS[c] + " <span class='count'>" +
         items.filter((i) => i.packed).length + "/" + items.length + "</span></h3><ul>";
       items.forEach((it, gi) => {
@@ -50,10 +61,12 @@
           "<span class='nm'>" + escapeHtml(it.n) + "</span>" +
           (it.qty > 1 ? " <span class='qty'>×" + it.qty + "</span>" : "") +
           (it.essential ? " <span class='ess'>essential</span>" : "") +
+          (it.custom ? " <span class='cust'>yours</span>" : "") +
           "</span></label></li>";
       });
       html += "</ul></section>";
     }
+    if (q && !shown) html = "<p class='muted'>No items match \"" + escapeHtml(itemQuery.trim()) + "\".</p>";
     wrap.innerHTML = html;
     wrap.querySelectorAll("input[type=checkbox]").forEach((cb) => {
       cb.addEventListener("change", () => {
@@ -143,13 +156,26 @@
   function generate() {
     const name = $("tripName").value.trim() || "My trip";
     const tripType = $("tripType").value, days = $("days").value, weather = $("weather").value;
+    // keep the user's own items when regenerating the same-named trip
+    const keptCustom = (current && current.name === name)
+      ? current.items.filter((it) => it.custom)
+      : [];
     const groups = generatePackingList({ tripType, days, weather });
-    current = { name, tripType, days: parseInt(days, 10) || 3, weather, items: flatten(groups) };
+    current = { name, tripType, days: parseInt(days, 10) || 3, weather, items: flatten(groups).concat(keptCustom) };
     $("tipBox").textContent = "Tip: " + packingTip(tripType, weather, current.days);
     $("tipBox").style.display = "block";
     persistCurrent();
     renderList();
     window.scrollTo({ top: $("progressWrap").offsetTop - 20, behavior: "smooth" });
+  }
+
+  function downloadCSV() {
+    if (!current) return;
+    const blob = new Blob([tripToCSV(current)], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = current.name.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").toLowerCase() + "-packing-list.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
   function printList() {
@@ -173,6 +199,8 @@
     const tt = $("tripType"), wx = $("weather");
     for (const t of TRIP_TYPES) { const o = document.createElement("option"); o.value = t; o.textContent = TRIP_LABELS[t]; tt.appendChild(o); }
     for (const wthr of WEATHERS) { const o = document.createElement("option"); o.value = wthr; o.textContent = WEATHER_LABELS[wthr]; wx.appendChild(o); }
+    const cc = $("custCat");
+    for (const c of CATEGORIES) { const o = document.createElement("option"); o.value = c; o.textContent = CATEGORY_LABELS[c]; cc.appendChild(o); }
     renderTypeCards();
     updateStub();
     ["tripName", "days"].forEach((id) => $(id).addEventListener("input", updateStub));
@@ -180,6 +208,41 @@
     tt.addEventListener("change", () => { syncTypeCards(); updateStub(); });
     $("genBtn").addEventListener("click", generate);
     $("printBtn").addEventListener("click", printList);
+    $("itemSearch").addEventListener("input", (e) => { itemQuery = e.target.value; renderList(); });
+    $("csvBtn").addEventListener("click", downloadCSV);
+    $("resetBtn").addEventListener("click", () => {
+      if (!current) return;
+      if (!confirm("Uncheck every item in this trip?")) return;
+      current.items = resetPacked(current.items);
+      persistCurrent(); renderList();
+    });
+    $("dupBtn").addEventListener("click", () => {
+      if (!current) return;
+      const name = prompt("Name for the copy:", current.name + " (copy)");
+      if (name === null) return;
+      try {
+        const trips = loadTrips();
+        const copy = duplicateTrip(current, name);
+        trips.push(copy); saveTrips(trips);
+        current = copy; itemQuery = ""; $("itemSearch").value = "";
+        $("tripName").value = copy.name;
+        renderSaved(); renderList(); updateStub();
+      } catch (err) { alert("Could not duplicate: " + err.message); }
+    });
+    $("custAdd").addEventListener("click", () => {
+      const msg = $("custMsg");
+      try {
+        const item = makeCustomItem({
+          n: $("custName").value, cat: $("custCat").value,
+          qty: $("custQty").value, essential: $("custEss").checked
+        });
+        if (!current) { msg.textContent = "Generate a packing list first, then add your item."; return; }
+        current.items.push(item);
+        persistCurrent(); renderList();
+        $("custName").value = ""; $("custEss").checked = false;
+        msg.textContent = "Added \"" + item.n + "\".";
+      } catch (err) { msg.textContent = err.message; }
+    });
     renderSaved();
   });
 })();

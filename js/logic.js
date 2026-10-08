@@ -61,6 +61,74 @@ function packingTip(tripType, weather, days) {
   return tips;
 }
 
+/** Categories known to the app (from the bank, or fallback list). */
+function getCategories() {
+  const BANK = getBank();
+  const cats = [];
+  for (const it of BANK) if (!cats.includes(it.cat)) cats.push(it.cat);
+  return cats.length ? cats : ["documents", "clothes", "toiletries", "tech", "extras"];
+}
+
+/**
+ * Validate + normalize a user-added custom item.
+ * data: {n, cat, qty, essential}. Throws on bad input.
+ * Returns {n, cat, qty, essential, packed:false, custom:true}.
+ */
+function makeCustomItem(data) {
+  const name = String((data && data.n) || "").trim();
+  if (!name) throw new Error("item needs a name");
+  if (name.length > 80) throw new Error("item name too long (max 80)");
+  const cats = getCategories();
+  const cat = String((data && data.cat) || "");
+  if (!cats.includes(cat)) throw new Error("bad category: " + cat);
+  let qty = parseInt((data && data.qty) || 1, 10);
+  if (!Number.isFinite(qty) || qty < 1) qty = 1;
+  if (qty > 99) qty = 99;
+  return { n: name, cat: cat, qty: qty, essential: !!(data && data.essential), packed: false, custom: true };
+}
+
+/** Case-insensitive name filter over a flat item array. */
+function filterItems(items, query) {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return items || [];
+  return (items || []).filter((it) => String(it.n || "").toLowerCase().includes(q));
+}
+
+/** Uncheck every item (returns a new array, originals untouched). */
+function resetPacked(items) {
+  return (items || []).map((it) => Object.assign({}, it, { packed: false }));
+}
+
+/**
+ * Deep-copy a trip under a new name, with packing progress reset.
+ * Throws when the new name is blank.
+ */
+function duplicateTrip(trip, newName) {
+  const name = String(newName || "").trim();
+  if (!name) throw new Error("duplicate needs a name");
+  if (!trip) throw new Error("no trip to duplicate");
+  return {
+    name: name,
+    tripType: trip.tripType,
+    days: trip.days,
+    weather: trip.weather,
+    items: resetPacked(trip.items || [])
+  };
+}
+
+/** Packing list as CSV: name,category,qty,essential,packed. */
+function tripToCSV(trip) {
+  const esc = (v) => {
+    const s = String(v == null ? "" : v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = ["name,category,qty,essential,packed"];
+  for (const it of ((trip && trip.items) || [])) {
+    lines.push([esc(it.n), esc(it.cat), it.qty || 1, it.essential ? "yes" : "no", it.packed ? "yes" : "no"].join(","));
+  }
+  return lines.join("\n");
+}
+
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { generatePackingList, countItems, essentialItems, packingTip };
+  module.exports = { generatePackingList, countItems, essentialItems, packingTip, makeCustomItem, filterItems, resetPacked, duplicateTrip, tripToCSV, getCategories };
 }

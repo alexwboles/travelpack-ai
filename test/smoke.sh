@@ -34,6 +34,43 @@ check "per-day qty respected (7-day trip -> 7 t-shirts)" node -e "
   const g=L.generatePackingList({tripType:'city',days:7,weather:'warm'});
   const t=g.clothes.find(i=>i.n==='T-shirts / tops');
   if(!t||t.qty!==7) throw new Error('qty wrong: '+JSON.stringify(t));"
+check "new logic API exported (custom/search/csv/dup/reset)" node -e "
+  const L=require('./js/logic.js');
+  ['makeCustomItem','filterItems','resetPacked','duplicateTrip','tripToCSV','getCategories'].forEach(f=>{if(typeof L[f]!=='function')throw new Error('missing '+f)});"
+check "makeCustomItem validates + normalizes" node -e "
+  const L=require('./js/logic.js');
+  const it=L.makeCustomItem({n:' Pillow spray ',cat:'extras',qty:'3',essential:true});
+  if(it.n!=='Pillow spray'||it.qty!==3||!it.essential||!it.custom||it.packed!==false)throw new Error('bad normalize: '+JSON.stringify(it));
+  const over=L.makeCustomItem({n:'x',cat:'tech',qty:500});
+  if(over.qty!==99)throw new Error('qty not clamped');
+  for(const bad of [{n:'',cat:'tech'},{n:'x',cat:'nope'}]){try{L.makeCustomItem(bad);throw new Error('accepted '+JSON.stringify(bad));}catch(e){if(!/needs a name|bad category/.test(e.message))throw e;}}"
+check "filterItems is case-insensitive, empty query returns all" node -e "
+  const L=require('./js/logic.js');
+  const items=[{n:'Passport'},{n:'Sunscreen'},{n:'power bank'}];
+  if(L.filterItems(items,'SUN').length!==1)throw new Error('case-insensitive fail');
+  if(L.filterItems(items,'').length!==3)throw new Error('empty query fail');
+  if(L.filterItems(items,'zzz').length!==0)throw new Error('no-match fail');"
+check "resetPacked + duplicateTrip copy, reset, rename" node -e "
+  const L=require('./js/logic.js');
+  const trip={name:'A',tripType:'city',days:3,weather:'warm',items:[{n:'x',packed:true,custom:true}]};
+  const r=L.resetPacked(trip.items);
+  if(r[0].packed!==false||trip.items[0].packed!==true)throw new Error('reset mutates or misses');
+  const d=L.duplicateTrip(trip,'B');
+  if(d.name!=='B'||d.items[0].packed!==false||d.items[0].custom!==true)throw new Error('dup wrong: '+JSON.stringify(d));
+  try{L.duplicateTrip(trip,'  ');throw new Error('blank name accepted');}catch(e){if(!/needs a name/.test(e.message))throw e;}"
+check "tripToCSV escapes commas and quotes" node -e "
+  const L=require('./js/logic.js');
+  const csv=L.tripToCSV({items:[{n:'Shirt, \"blue\"',cat:'clothes',qty:2,essential:true,packed:false}]});
+  const lines=csv.split('\n');
+  if(lines[0]!=='name,category,qty,essential,packed')throw new Error('bad header');
+  if(lines[1]!=='\"Shirt, \"\"blue\"\"\",clothes,2,yes,no')throw new Error('bad escape: '+lines[1]);"
+check "UI wires search/export/reset/duplicate/custom controls" bash -c "
+  for id in listTools itemSearch csvBtn resetBtn dupBtn customBox custName custCat custQty custEss custAdd; do
+    grep -q \"id=\\\"\$id\\\"\" index.html || exit 1
+  done
+  for n in makeCustomItem filterItems resetPacked duplicateTrip tripToCSV downloadCSV itemQuery; do
+    grep -q \"\$n\" js/app.js || exit 1
+  done"
 
 echo "--- smoke: $pass passed, $fail failed ---"
 exit $((fail>0))

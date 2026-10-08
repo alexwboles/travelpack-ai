@@ -82,8 +82,29 @@
   <!-- ============ departure board: don't forget ============ -->
   <div id="forgetStrip" class="departure" style="display:none"></div>
 
+  <!-- ============ list tools: search, export, reset, duplicate ============ -->
+  <div id="listTools" class="list-tools" style="display:none">
+    <input id="itemSearch" type="search" placeholder="Search items…" aria-label="Search packing list">
+    <button id="csvBtn" class="ghost">Export CSV</button>
+    <button id="resetBtn" class="ghost">Reset checks</button>
+    <button id="dupBtn" class="ghost">Duplicate trip</button>
+  </div>
+
   <!-- ============ luggage compartments ============ -->
   <div id="listWrap"></div>
+
+  <!-- ============ add your own item ============ -->
+  <section id="customBox" class="custom-add" style="display:none" aria-label="Add your own item">
+    <h3>Add your own item</h3>
+    <div class="custom-row">
+      <input id="custName" type="text" placeholder="e.g. Pillow spray" maxlength="80">
+      <select id="custCat" aria-label="Category"></select>
+      <input id="custQty" type="number" min="1" max="99" value="1" aria-label="Quantity">
+      <label class="chk"><input id="custEss" type="checkbox"> Essential</label>
+      <button id="custAdd" class="primary">Add item</button>
+    </div>
+    <p id="custMsg" class="muted"></p>
+  </section>
 
   <!-- ============ ticket wallet ============ -->
   <section class="wallet">
